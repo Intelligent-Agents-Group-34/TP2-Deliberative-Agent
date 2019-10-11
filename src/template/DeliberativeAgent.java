@@ -65,13 +65,21 @@ public class DeliberativeAgent implements DeliberativeBehavior {
 			state.addCarriedTask(task);
 		}		
 		
+		double startTime;
+		
 		// Compute the plan with the selected algorithm.
 		switch (algorithm) {
 		case ASTAR:
+			startTime = System.currentTimeMillis();
 			plan = AStarPlan(state);
+			System.out.println("Time elapsed for A*: "
+					+ (System.currentTimeMillis() - startTime) + " ms.");
 			break;
 		case BFS:
-			plan = BFSPlan(state);
+			startTime = System.currentTimeMillis();
+			plan = optimalBFSPlan(state);
+			System.out.println("Time elapsed for BFS: "
+					+ (System.currentTimeMillis() - startTime) + " ms.");
 			break;
 		default:
 			throw new AssertionError("Should not happen.");
@@ -102,7 +110,37 @@ public class DeliberativeAgent implements DeliberativeBehavior {
 			}
 			
 			Q.addAll(n.getNextStates());
-			Q.sort(null);
+		}
+		
+		return n.getPlan();
+	}
+	
+	private Plan optimalBFSPlan(State initState) {
+		List<State> Q = new ArrayList<State>();
+		Q.add(initState);
+		
+		State n = null;
+		
+		while(true) {
+			if(Q.isEmpty())
+				return null;
+			
+			n = Q.remove(0);
+			
+			if(n.isFinalState()) {
+				boolean smallestCost = true;
+				for(State s : Q)
+				{
+					if(n.getCost() > s.getCost()){
+						smallestCost = false;
+						break;
+					}
+				}
+				if(smallestCost)
+					break;
+			}
+			
+			Q.addAll(n.getNextStates());
 		}
 		
 		return n.getPlan();
@@ -125,23 +163,23 @@ public class DeliberativeAgent implements DeliberativeBehavior {
 				break;
 			}
 			
-			boolean contains = false;
-			State stateToBeRemove = null;
+			boolean contained = false;
+			State copyToRemove = null;
 			for(State s : C) {
 				if(n.isStateEqual(s)) {
 					if(n.getCost() < s.getCost()) {
-						contains = false;
-						stateToBeRemove = s;
+						contained = false;
+						copyToRemove = s;
 					}
 					else {
-						contains = true;
+						contained = true;
 					}
 					break;
 				}
 			}
 			
-			if(!contains) {
-				C.remove(stateToBeRemove);
+			if(!contained) {
+				C.remove(copyToRemove);
 				C.add(n);
 				Q.addAll(n.getNextStates());
 				Q.sort(null);

@@ -279,6 +279,28 @@ public class State implements Comparable<State> {
 		return res;
 	}
 	
+	public double getHeuristicValue() {
+//		return 0;
+		double maxDist = 0;
+		
+		for(Task t : this.availableTasks) {
+			double dist = this.agentPos.distanceTo(t.pickupCity);
+			dist += t.pickupCity.distanceTo(t.deliveryCity);
+			if(dist > maxDist) {
+				maxDist = dist;
+			}
+		}
+		
+		for(Task t : this.carriedTasks) {
+			double dist = this.agentPos.distanceTo(t.deliveryCity);
+			if(dist > maxDist) {
+				maxDist = dist;
+			}
+		}
+		
+		return this.costPerKm*maxDist;
+	}
+	
 	public String toString() {
 		String name = "Agent at " + this.agentPos.name + " with " + this.agentWeight
 				+ "/" + this.maxAgentWeight + " kg and cost of " + this.cost + ".\n";
@@ -300,8 +322,8 @@ public class State implements Comparable<State> {
 	// States are compared relative to their cost
 	@Override
 	public int compareTo(State o) {
-		double c1 = this.cost;
-		double c2 = o.cost;
+		double c1 = this.getCost();
+		double c2 = o.getCost();
 		return c1 > c2 ? 1 : (c1 < c2 ? -1 : 0);
 	}
 
@@ -323,10 +345,10 @@ public class State implements Comparable<State> {
 	}
 
 	public double getCost() {
-		return cost;
+		return this.cost + this.getHeuristicValue();
 	}
 	
 	public Plan getPlan( ) {
-		return new Plan(this.planInitialCity, planActions);
+		return new Plan(this.planInitialCity, this.planActions);
 	}
 }

@@ -102,6 +102,7 @@ public class DeliberativeAgent implements DeliberativeBehavior {
 			}
 			
 			Q.addAll(n.getNextStates());
+			Q.sort(null);
 		}
 		
 		return n.getPlan();

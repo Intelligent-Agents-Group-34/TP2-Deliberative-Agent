@@ -54,24 +54,16 @@ public class DeliberativeAgent implements DeliberativeBehavior {
 	public Plan plan(Vehicle vehicle, TaskSet tasks) {
 		Plan plan;
 		
+		// Create a state corresponding to the current situation
 		State state = new State(vehicle.getCurrentCity(), vehicle.capacity(),
 				vehicle.costPerKm(), 0d);
+		
 		for(Task task : tasks) {
 			state.addAvailableTask(task);
 		}
-		
 		for(Task task : vehicle.getCurrentTasks()) {
 			state.addCarriedTask(task);
-		}
-		
-//		List<State> nextStates = state.getNextStates();
-//		System.out.println("For current state:");
-//		System.out.println(state.toString());
-//		System.out.println("The next possible states are:");
-//		for(State s : nextStates) {
-//			System.out.println(s.toString());
-//		}
-		
+		}		
 		
 		// Compute the plan with the selected algorithm.
 		switch (algorithm) {
@@ -85,19 +77,24 @@ public class DeliberativeAgent implements DeliberativeBehavior {
 			throw new AssertionError("Should not happen.");
 		}
 		
+		System.out.println("Agent " + this.agent.id() + " has computed plan:");
 		System.out.println(plan.toString());
-		System.out.println("Total plan distance: " + plan.totalDistance() + " km.");
+		System.out.println("Plan total distance: " + plan.totalDistance() + " km.");
 		
 		return plan;
 	}
 	
+	// Compute a plan according to the Breadth-First Search algorithm
 	private Plan BFSPlan(State initState) {
 		List<State> Q = new ArrayList<State>();
 		Q.add(initState);
 		
 		State n = null;
 		
-		while(!Q.isEmpty()) {
+		while(true) {
+			if(Q.isEmpty())
+				return null;
+			
 			n = Q.remove(0);
 			
 			if(n.isFinalState()) {
@@ -110,6 +107,7 @@ public class DeliberativeAgent implements DeliberativeBehavior {
 		return n.getPlan();
 	}
 	
+	// Compute a plan according to the A* algorithm
 	private Plan AStarPlan(State initState) {
 		List<State> Q = new ArrayList<State>(), C = new ArrayList<State>();
 		Q.add(initState);
@@ -117,10 +115,8 @@ public class DeliberativeAgent implements DeliberativeBehavior {
 		State n = null;
 		
 		while(true) {
-			if(Q.isEmpty()) {
-				n = null;
-				break;
-			}
+			if(Q.isEmpty())
+				return null;
 			
 			n = Q.remove(0);
 			
@@ -153,29 +149,6 @@ public class DeliberativeAgent implements DeliberativeBehavior {
 		}
 		
 		return n.getPlan();
-	}
-	
-	private Plan naivePlan(Vehicle vehicle, TaskSet tasks) {
-		City current = vehicle.getCurrentCity();
-		Plan plan = new Plan(current);
-
-		for (Task task : tasks) {
-			// move: current city => pickup location
-			for (City city : current.pathTo(task.pickupCity))
-				plan.appendMove(city);
-
-			plan.appendPickup(task);
-
-			// move: pickup location => delivery location
-			for (City city : task.path())
-				plan.appendMove(city);
-
-			plan.appendDelivery(task);
-
-			// set current city
-			current = task.deliveryCity;
-		}
-		return plan;
 	}
 
 	@Override

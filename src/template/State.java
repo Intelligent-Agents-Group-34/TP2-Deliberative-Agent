@@ -12,17 +12,17 @@ import logist.task.Task;
 import logist.topology.Topology.City;
 
 public class State implements Comparable<State> {
-	private City agentPos;
-	private int maxAgentWeight;
-	private int costPerKm;
-	private double cost;
-	private List<Task> availableTasks;
-	private List<Task> carriedTasks;
+	private City agentPos; // Current position of the agent
+	private int maxAgentWeight; // Maximum weight that the agent's vehicle can carry
+	private int costPerKm; // Cost per km of the agent's vehicle
+	private double cost; // Cost of the action
+	private List<Task> availableTasks; // Tasks available on world (not yet picked up)
+	private List<Task> carriedTasks; // Tasks currently carried by the agent
 	
-	private City planInitialCity;
-	private List<Action> planActions;
+	private City planInitialCity; // Initial city of the plan
+	private List<Action> planActions; // List of actions from the initial state to get into this one
 	
-	private int agentWeight = 0;
+	private int agentWeight = 0; // Current weight of the agent
 	
 	public State(City agentPos, int maxAgentWeight, int costPerKm, double cost,
 			List<Task> availableTasks, List<Task> carriedTasks, City planInitialCity,
@@ -100,6 +100,15 @@ public class State implements Comparable<State> {
 		return this.canPickUp(task.weight);
 	}
 	
+	public boolean canDeliverAndPickUp(List<Task> tasksToDeliver, Task taskToPickUp) {
+		int weight = taskToPickUp.weight;
+		for(Task t : tasksToDeliver) {
+			weight -= t.weight;
+		}
+		
+		return this.canPickUp(weight);
+	}
+	
 	// Return the list of states that can be reached.
 	// Only useful states are taken into consideration, which means the transition must
 	// achieve at least one of the following:
@@ -112,35 +121,35 @@ public class State implements Comparable<State> {
 		List<Task> carriedTasks = new ArrayList<Task>(this.carriedTasks);
 		List<Task> pickedUpAvailableTasks = new ArrayList<Task>();
 		
-		int i = 0;
-		
 		// For each task currently carried by the agent, a possibility of transition is
 		// to move to the delivery city and deliver the task. If there are tasks available
 		// in the delivery city, one of them can also be picked up.
-		while(i < carriedTasks.size()) {
+		for(int i = 0; i < carriedTasks.size(); i++) {
 			Task cTask = carriedTasks.get(i);
 			double cost = this.cost
 					+ this.costPerKm*this.agentPos.distanceTo(cTask.deliveryCity);
 			
 			// Also deliver all tasks with the same delivery city
-			List<Task> taskToDeliver = new ArrayList<Task>();
-			int j = i + 1;
-			while(j < carriedTasks.size()) {
+			List<Task> tasksToDeliver = new ArrayList<Task>();
+			for(int j = i + 1; j < carriedTasks.size(); j++) {
 				Task task = carriedTasks.get(j);
 				if(task.deliveryCity == cTask.deliveryCity) {
-					taskToDeliver.add(task);
+					tasksToDeliver.add(task);
 				}
-				j++;
 			}
 			// Remove them from the main list so the same transition isn't created
 			// multiple times
-			carriedTasks.removeAll(taskToDeliver);
-			taskToDeliver.add(cTask);
+			carriedTasks.removeAll(tasksToDeliver);
+			tasksToDeliver.add(cTask);
 			
 			// For each available task
 			for(Task aTask : availableTasks) {
 				// Check if the available task is located at the delivery city
 				if(aTask.pickupCity == cTask.deliveryCity) {
+					// Check if the task can be picked up
+					if(!this.canDeliverAndPickUp(tasksToDeliver, aTask))
+						continue;
+					
 					// If so, create a state corresponding to this case
 					State state = new State(cTask.deliveryCity, this.maxAgentWeight,
 							this.costPerKm, cost, this.planInitialCity,
@@ -150,7 +159,7 @@ public class State implements Comparable<State> {
 					for(City c : this.agentPos.pathTo(cTask.deliveryCity)) {
 						state.planActions.add(new Move(c));						
 					}
-					for(Task t : taskToDeliver) {
+					for(Task t : tasksToDeliver) {
 						state.planActions.add(new Delivery(t));
 					}
 					state.planActions.add(new Pickup(aTask));
@@ -165,9 +174,8 @@ public class State implements Comparable<State> {
 							state.addAvailableTask(t);
 						}
 					}
-					
 					for(Task t : this.carriedTasks) {
-						if(!taskToDeliver.contains(t)) {
+						if(!tasksToDeliver.contains(t)) {
 							state.addCarriedTask(t);
 						}
 					}
@@ -187,16 +195,16 @@ public class State implements Comparable<State> {
 			for(City c : this.agentPos.pathTo(cTask.deliveryCity)) {
 				state.planActions.add(new Move(c));						
 			}
-			for(Task t : taskToDeliver) {
+			for(Task t : tasksToDeliver) {
 				state.planActions.add(new Delivery(t));
 			}
 			
-			// Add all tasks to the new state except the ones delivered.
+			// Add all tasks to the new state except the ones delivered
 			for(Task t : this.availableTasks) {
 				state.addAvailableTask(t);
 			}
 			for(Task t : this.carriedTasks) {
-				if(!taskToDeliver.contains(t)) {
+				if(!tasksToDeliver.contains(t)) {
 					state.addCarriedTask(t);
 				}
 			}
@@ -205,12 +213,15 @@ public class State implements Comparable<State> {
 			nextStatesList.add(state);
 			
 			availableTasks.removeAll(pickedUpAvailableTasks);
-			i++;
 		}
 		
 		// Also add a state corresponding to moving and picking up one of the remaining
 		// available tasks
 		for(Task task : availableTasks) {
+			// Check if the task can be picked up
+			if(!this.canPickUp(task))
+				continue;
+			
 			double cost = this.cost
 					+ this.costPerKm*this.agentPos.distanceTo(task.pickupCity);
 			State state = new State(task.pickupCity, this.maxAgentWeight,
@@ -222,7 +233,7 @@ public class State implements Comparable<State> {
 			}
 			state.planActions.add(new Pickup(task));
 			
-			// Add all tasks to the new state. The one which has been picked up must be modified.
+			// Add all tasks to the new state. The one which has been picked up must be modified
 			for(Task t : this.availableTasks) {
 				if(t == task) {
 					state.addCarriedTask(t);
@@ -242,11 +253,13 @@ public class State implements Comparable<State> {
 		return nextStatesList;
 	}
 	
+	// Return whether this state is a final or not. State are considered to be final
+	// if no task remains (carried and in world).
 	public boolean isFinalState() {
-		return this.agentWeight == 0 && this.availableTasks.isEmpty()
-				&& this.carriedTasks.isEmpty();
+		return this.availableTasks.isEmpty() && this.carriedTasks.isEmpty();
 	}
 	
+	// Return whether the two states are cost independently equal.
 	public boolean isStateEqual(State o) {
 		boolean res = true;
 
@@ -270,17 +283,21 @@ public class State implements Comparable<State> {
 		String name = "Agent at " + this.agentPos.name + " with " + this.agentWeight
 				+ "/" + this.maxAgentWeight + " kg and cost of " + this.cost + ".\n";
 		name += "List of tasks:";
+		
 		for(Task task : this.availableTasks) {
 			name += "\n\tTo deliver : " + "From " + task.pickupCity.name + " to "
 					+ task.deliveryCity.name + ", " + task.weight + " kg.";
 		}
+		
 		for(Task task : this.carriedTasks) {
 			name += "\n\tDelivering : " + "From " + task.pickupCity.name + " to "
 					+ task.deliveryCity.name + ", " + task.weight + " kg.";
 		}
+		
 		return name;
 	}
 	
+	// States are compared relative to their cost
 	@Override
 	public int compareTo(State o) {
 		double c1 = this.cost;

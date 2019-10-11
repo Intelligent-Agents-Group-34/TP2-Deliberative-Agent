@@ -54,44 +54,43 @@ public class DeliberativeAgent implements DeliberativeBehavior {
 	public Plan plan(Vehicle vehicle, TaskSet tasks) {
 		Plan plan;
 		
-		State state = new State(vehicle.getCurrentCity(), vehicle.capacity(), vehicle.costPerKm(), 0d);
+		State state = new State(vehicle.getCurrentCity(), vehicle.capacity(),
+				vehicle.costPerKm(), 0d);
 		for(Task task : tasks) {
-			state.addTask(task.pickupCity, task.deliveryCity, task.weight, false);
+			state.addAvailableTask(task);
 		}
 		
 		for(Task task : vehicle.getCurrentTasks()) {
-			state.addTask(task.pickupCity, task.deliveryCity, task.weight, true);
+			state.addCarriedTask(task);
 		}
 		
-		List<State> nextStates = state.getNextStates();
-		System.out.println("For current state:");
-		System.out.println(state.toString());
-		System.out.println("The next possible states are:");
-		for(State s : nextStates) {
-			System.out.println(s.toString());
-		}
+//		List<State> nextStates = state.getNextStates();
+//		System.out.println("For current state:");
+//		System.out.println(state.toString());
+//		System.out.println("The next possible states are:");
+//		for(State s : nextStates) {
+//			System.out.println(s.toString());
+//		}
 		
-		BFSPlan(state);
 		
 		// Compute the plan with the selected algorithm.
 		switch (algorithm) {
 		case ASTAR:
-			// ...
 			plan = naivePlan(vehicle, tasks);
 			break;
 		case BFS:
-			// ...
-			plan = naivePlan(vehicle, tasks);
+			plan = BFSPlan(state);
 			break;
 		default:
 			throw new AssertionError("Should not happen.");
-		}		
+		}
+		
+		System.out.println(plan.toString());
+		
 		return plan;
 	}
 	
 	private Plan BFSPlan(State initState) {
-		Plan plan = new Plan(initState.getAgentPos());
-		
 		List<State> Q = new ArrayList<State>();
 		Q.add(initState);
 		
@@ -107,10 +106,12 @@ public class DeliberativeAgent implements DeliberativeBehavior {
 			Q.addAll(n.getNextStates());
 		}
 		
-		System.out.println("n:");
-		System.out.println(n.toString());
+		return n.getPlan();
+	}
+	
+	private Plan AStarPlan(State initState) {
 		
-		return plan;
+		return initState.getPlan();
 	}
 	
 	private Plan naivePlan(Vehicle vehicle, TaskSet tasks) {

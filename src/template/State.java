@@ -239,13 +239,31 @@ public class State implements Comparable<State> {
 			nextStatesList.add(state);
 		}
 
-		nextStatesList.sort(null);
 		return nextStatesList;
 	}
 	
 	public boolean isFinalState() {
 		return this.agentWeight == 0 && this.availableTasks.isEmpty()
 				&& this.carriedTasks.isEmpty();
+	}
+	
+	public boolean isStateEqual(State o) {
+		boolean res = true;
+
+		res &= o.agentPos == this.agentPos;
+		res &= o.maxAgentWeight == this.maxAgentWeight;
+		res &= o.costPerKm == this.costPerKm;
+		
+		res &= o.availableTasks.containsAll(this.availableTasks);
+		res &= this.availableTasks.containsAll(o.availableTasks);
+		
+		res &= o.carriedTasks.containsAll(this.carriedTasks);
+		res &= this.carriedTasks.containsAll(o.carriedTasks);
+		
+		res &= o.planInitialCity == this.planInitialCity;
+		res &= o.agentWeight == this.agentWeight;
+		
+		return res;
 	}
 	
 	public String toString() {

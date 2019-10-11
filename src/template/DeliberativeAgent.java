@@ -76,7 +76,7 @@ public class DeliberativeAgent implements DeliberativeBehavior {
 		// Compute the plan with the selected algorithm.
 		switch (algorithm) {
 		case ASTAR:
-			plan = naivePlan(vehicle, tasks);
+			plan = AStarPlan(state);
 			break;
 		case BFS:
 			plan = BFSPlan(state);
@@ -86,6 +86,7 @@ public class DeliberativeAgent implements DeliberativeBehavior {
 		}
 		
 		System.out.println(plan.toString());
+		System.out.println("Total plan distance: " + plan.totalDistance() + " km.");
 		
 		return plan;
 	}
@@ -110,8 +111,48 @@ public class DeliberativeAgent implements DeliberativeBehavior {
 	}
 	
 	private Plan AStarPlan(State initState) {
+		List<State> Q = new ArrayList<State>(), C = new ArrayList<State>();
+		Q.add(initState);
 		
-		return initState.getPlan();
+		State n = null;
+		
+		while(true) {
+			if(Q.isEmpty()) {
+				n = null;
+				break;
+			}
+			
+			n = Q.remove(0);
+			
+			if(n.isFinalState()) {
+				break;
+			}
+			
+			boolean contains = false;
+			State stateToBeRemove = null;
+			for(State s : C) {
+				if(n.isStateEqual(s)) {
+					if(n.getCost() < s.getCost()) {
+						contains = false;
+						stateToBeRemove = s;
+					}
+					else {
+						contains = true;
+					}
+					break;
+				}
+			}
+			
+			if(!contains) {
+				C.remove(stateToBeRemove);
+				C.add(n);
+				Q.addAll(n.getNextStates());
+				Q.sort(null);
+			}
+			
+		}
+		
+		return n.getPlan();
 	}
 	
 	private Plan naivePlan(Vehicle vehicle, TaskSet tasks) {

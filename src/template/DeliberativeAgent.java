@@ -65,25 +65,20 @@ public class DeliberativeAgent implements DeliberativeBehavior {
 			state.addCarriedTask(task);
 		}		
 		
-		double startTime;
-		
 		// Compute the plan with the selected algorithm.
 		switch (algorithm) {
 		case ASTAR:
-			startTime = System.currentTimeMillis();
 			plan = AStarPlan(state);
-			System.out.println("Time elapsed for A*: "
-					+ (System.currentTimeMillis() - startTime) + " ms.");
 			break;
 		case BFS:
-			startTime = System.currentTimeMillis();
 			plan = optimalBFSPlan(state);
-			System.out.println("Time elapsed for BFS: "
-					+ (System.currentTimeMillis() - startTime) + " ms.");
 			break;
 		default:
 			throw new AssertionError("Should not happen.");
 		}
+		
+		// Compare the time required to compute BFS or A*
+		compareAlgorithms(state, 10);
 		
 		System.out.println("Agent " + this.agent.id() + " has computed plan:");
 		System.out.println(plan.toString());
@@ -100,50 +95,62 @@ public class DeliberativeAgent implements DeliberativeBehavior {
 		State n = null;
 		
 		while(true) {
+			// Should never happen, or it means that they aren't any solution
 			if(Q.isEmpty())
-				return null;
+				return Plan.EMPTY;
 			
+			// Get the first element of Q and remove it
 			n = Q.remove(0);
 			
+			// If n is a final state we are done
 			if(n.isFinalState()) {
 				break;
 			}
 			
+			// Add all next states of n at the end of Q
 			Q.addAll(n.getNextStates());
 		}
 		
 		return n.getPlan();
 	}
 	
+	// Compute a plan according to the Breadth-First Search algorithm. The algorithm
+	// has been a little bit modified in order to return the optimal plan in terms of
+	// cost instead of number of actions.
 	private Plan optimalBFSPlan(State initState) {
 		List<State> Q = new ArrayList<State>();
 		Q.add(initState);
 		
 		State n = null;
+		State best = null;
 		
 		while(true) {
 			if(Q.isEmpty())
-				return null;
-			
-			n = Q.remove(0);
-			
-			if(n.isFinalState()) {
-				boolean smallestCost = true;
-				for(State s : Q)
-				{
-					if(n.getCost() > s.getCost()){
-						smallestCost = false;
-						break;
-					}
-				}
-				if(smallestCost)
-					break;
+			{
+				// Should never happen, or it means that they aren't any solution
+				if(best == null)
+					return Plan.EMPTY;
+				else
+					return best.getPlan();
 			}
 			
-			Q.addAll(n.getNextStates());
+			// Extract the first element of Q
+			n = Q.remove(0);
+			
+			// If its cost is greater than the best solution found so far, discard it
+			if(best != null && n.getCost() >= best.getCost())
+				continue;
+			
+			// If n is a final state
+			if(n.isFinalState()) {
+				// n is then the best final state so far
+				best = n;
+			}
+			else {
+				// Add all next states of n at the end of Q
+				Q.addAll(n.getNextStates());
+			}
 		}
-		
-		return n.getPlan();
 	}
 	
 	// Compute a plan according to the A* algorithm
@@ -154,15 +161,19 @@ public class DeliberativeAgent implements DeliberativeBehavior {
 		State n = null;
 		
 		while(true) {
+			// Should never happen, or it means that they aren't any solution
 			if(Q.isEmpty())
-				return null;
+				return Plan.EMPTY;
 			
+			// Extract the first element of Q
 			n = Q.remove(0);
 			
+			// If n is a final state we are done
 			if(n.isFinalState()) {
 				break;
 			}
 			
+			// Check if n has a copy with a lower cost in C
 			boolean contained = false;
 			State copyToRemove = null;
 			for(State s : C) {
@@ -178,16 +189,41 @@ public class DeliberativeAgent implements DeliberativeBehavior {
 				}
 			}
 			
+			// If it has no copy, or a copy with a higher cost
 			if(!contained) {
+				// Remove the copy and add n instead
 				C.remove(copyToRemove);
 				C.add(n);
+				
+				// Add the next states to Q
 				Q.addAll(n.getNextStates());
+				// Sort Q based on the cost of the states
 				Q.sort(null);
 			}
 			
 		}
 		
 		return n.getPlan();
+	}
+	
+	// Compute the mean execution time of BFS and A* algorithm. The mean is done over
+	// n samples.
+	public void compareAlgorithms(State initState, int n) {
+		double startTime;
+		
+		startTime = System.currentTimeMillis();
+		for(int i = 0; i < n; i++) {
+			AStarPlan(initState);
+		}
+		System.out.println("Mean time elapsed for A*: "
+				+ (System.currentTimeMillis() - startTime)/n + " ms.");
+		
+		startTime = System.currentTimeMillis();
+		for(int i = 0; i < n; i++) {
+			optimalBFSPlan(initState);
+		}
+		System.out.println("Mean time elapsed for BFS: "
+				+ (System.currentTimeMillis() - startTime)/n + " ms.");
 	}
 
 	@Override

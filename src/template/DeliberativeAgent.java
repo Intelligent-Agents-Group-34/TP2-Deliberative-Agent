@@ -63,8 +63,12 @@ public class DeliberativeAgent implements DeliberativeBehavior {
 		}
 		for(Task task : vehicle.getCurrentTasks()) {
 			state.addCarriedTask(task);
-		}		
+		}
 		
+		// Compare the time required to compute BFS or A*
+		//compareAlgorithms(state, 3);
+		
+		long start_t = System.currentTimeMillis();
 		// Compute the plan with the selected algorithm.
 		switch (algorithm) {
 		case ASTAR:
@@ -77,17 +81,17 @@ public class DeliberativeAgent implements DeliberativeBehavior {
 			throw new AssertionError("Should not happen.");
 		}
 		
-		// Compare the time required to compute BFS or A*
-		compareAlgorithms(state, 10);
 		
-		System.out.println("Agent " + this.agent.id() + " has computed plan:");
+		System.out.println("Agent " + this.agent.id() + " has computed the following plan in "
+				+ (System.currentTimeMillis() - start_t) + " ms:");
 		System.out.println(plan.toString());
 		System.out.println("Plan total distance: " + plan.totalDistance() + " km.");
 		
 		return plan;
 	}
 	
-	// Compute a plan according to the Breadth-First Search algorithm
+	// Compute a plan according to the Breadth-First Search algorithm.
+	// Not used.
 	private Plan BFSPlan(State initState) {
 		List<State> Q = new ArrayList<State>();
 		Q.add(initState);
@@ -206,10 +210,10 @@ public class DeliberativeAgent implements DeliberativeBehavior {
 		return n.getPlan();
 	}
 	
-	// Compute the mean execution time of BFS and A* algorithm. The mean is done over
+	// Compute the mean execution time of BFS and A* algorithms. The mean is done over
 	// n samples.
 	public void compareAlgorithms(State initState, int n) {
-		double startTime;
+		long startTime;
 		
 		startTime = System.currentTimeMillis();
 		for(int i = 0; i < n; i++) {

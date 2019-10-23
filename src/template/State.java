@@ -15,7 +15,7 @@ public class State implements Comparable<State> {
 	private City agentPos; // Current position of the agent
 	private int maxAgentWeight; // Maximum weight that the agent's vehicle can carry
 	private int costPerKm; // Cost per km of the agent's vehicle
-	private double cost; // Cost of the action
+	private double cost; // Cost of the state, without the heuristic value
 	private List<Task> availableTasks; // Tasks available on world (not yet picked up)
 	private List<Task> carriedTasks; // Tasks currently carried by the agent
 	
@@ -279,8 +279,8 @@ public class State implements Comparable<State> {
 		return res;
 	}
 	
+	// See report for details
 	public double getHeuristicValue() {
-//		return 0;
 		double maxDist = 0;
 		
 		for(Task t : this.availableTasks) {
